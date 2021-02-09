@@ -1,6 +1,7 @@
 package org.example.utilities.http;
 
 import org.example.entities.Company;
+import org.example.entities.Server;
 import org.example.utilities.ParserCompanySubscriber;
 import org.example.utilities.json.BulkJsonParser;
 import org.example.utilities.json.JsonParser;
@@ -15,24 +16,33 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class ApiClient implements ParserCompanySubscriber {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
-    private static final long REQUEST_VOLUME = 1;
+    private static final long REQUEST_VOLUME = 2;
     private final String key;
     private final URI url;
     private final HttpClient client;
     private Subscription subscription;
 
+    private List<CompletableFuture<Void>> futures;
+
     public ApiClient(ApiInfo info) {
         this.key = info.key;
         this.url = info.url;
         this.client = HttpClient.newHttpClient();
+        futures = new ArrayList<>();
     }
 
-    public void getJson(URI uri, Company company) {
+    public void getJson(URI uri, Company company) throws ExecutionException, InterruptedException {
+
+        L.info("API call to send ");
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .timeout(Duration.ofSeconds(5))
@@ -42,12 +52,21 @@ public class ApiClient implements ParserCompanySubscriber {
                 .build();
 
         CompletableFuture<HttpResponse<String>> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-        CompletableFuture<String> result = response.thenApply(HttpResponse::body);
+        handleData(company, response);
+    }
 
-        result.thenApply(JsonParser::parseServer)
-                .thenApply(server -> company.server = server)
-                .thenAccept(c -> printResult(company))
-                .join();
+    private void handleData(Company company, CompletableFuture<HttpResponse<String>> response) {
+
+        CompletableFuture<String> result = response.thenApply(HttpResponse::body);
+        CompletableFuture<Server> server = result.thenApply(JsonParser::parseServer);
+        CompletableFuture<Company> comp = server.thenApply(s -> {
+            company.server = s;
+            return company;
+        });
+
+        futures.add(comp.thenAccept(this::printResult));
+
+        L.info("API call sent");
     }
 
     protected void printResult(Company company) {
@@ -70,6 +89,8 @@ public class ApiClient implements ParserCompanySubscriber {
             this.getJson(uri, company);
         } catch (URISyntaxException e) {
             L.error("malformed URI ", e);
+        } catch (InterruptedException | ExecutionException e) {
+            L.error("Exception occurred ", e);
         }
 
         subscription.request(REQUEST_VOLUME);
@@ -82,6 +103,11 @@ public class ApiClient implements ParserCompanySubscriber {
 
     @Override
     public void onComplete() {
-        L.info("Job completed - no more data in the queue");
+        L.info("Job completed");
+    }
+
+    @Override
+    public List<CompletableFuture<Void>> getFutures() {
+        return this.futures;
     }
 }

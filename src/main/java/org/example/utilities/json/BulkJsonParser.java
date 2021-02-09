@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 
 public class BulkJsonParser {
 
@@ -33,15 +34,23 @@ public class BulkJsonParser {
             L.info("About to read file {} in stream mode", file);
             long timelapse = System.currentTimeMillis();
             reader.beginArray();
+
+            int i = 0;
             while (reader.hasNext()) {
-                Company company = gson.fromJson(reader, Company.class);
-                // create a publisher & ensure all data are kept in memory until the subscriber receives it
-                Flowable.just(company).onBackpressureBuffer().subscribe(subscriber);
+                if (i++ > 100)
+                    reader.skipValue();
+                else {
+                    Company company = gson.fromJson(reader, Company.class);
+                    // create a publisher & ensure all data are kept in memory until the subscriber receives it
+                    Flowable.just(company).onBackpressureBuffer().subscribe(subscriber);
+                }
             }
             reader.endArray();
             reader.close();
 
             L.info("Went over the file in {} ms", System.currentTimeMillis() - timelapse);
+            L.info("Now waiting for the subscriber to terminate");
+            CompletableFuture.allOf(subscriber.getFutures().toArray(new CompletableFuture[subscriber.getFutures().size()])).join();
 
         } catch (UnsupportedEncodingException ex) {
 
