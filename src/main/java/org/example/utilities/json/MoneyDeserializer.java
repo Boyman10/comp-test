@@ -1,4 +1,4 @@
-package org.example.utility;
+package org.example.utilities.json;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;

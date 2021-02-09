@@ -1,4 +1,4 @@
-package org.example.utility;
+package org.example.utilities.properties;
 
 import java.net.URI;
 import java.net.URISyntaxException;

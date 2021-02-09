@@ -1,9 +1,9 @@
 package org.example;
 
-import org.example.utility.ApiClient;
-import org.example.utility.ApiInfo;
-import org.example.utility.JsonParser;
-import org.example.utility.PropertiesReader;
+import org.example.utilities.http.ApiClient;
+import org.example.utilities.json.BulkJsonParser;
+import org.example.utilities.properties.ApiInfo;
+import org.example.utilities.properties.PropertiesReader;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,16 +12,9 @@ public class App {
     public static void main(String[] args) throws IOException {
 
         ApiInfo info = PropertiesReader.loadProp();
-        System.out.println(info);
+        ApiClient client = new ApiClient(info);
 
-        JsonParser parser = new JsonParser();
-        parser.parseJson(new File("src/main/resources/companies.json"));
-
-        ApiClient client = new ApiClient();
-        parser.subscribe(client);
-
-        //   ApiClient.getJson(info.getFullUri()); // Get element from QUEUE !!!
-
-
+        BulkJsonParser parser = new BulkJsonParser(client);
+        parser.run(new File("src/main/resources/companies.json"));
     }
 }

@@ -1,4 +1,4 @@
-package org.example.entity;
+package org.example.entities;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -12,7 +12,7 @@ public class Company {
     public Float totalMoneyRaised;
 
     public String name;
-    public String country;
+    public Server server;
 
     @Override
     public String toString() {
@@ -20,7 +20,7 @@ public class Company {
                 "name='" + name + "', " +
                 "homepageUrl='" + getDomainName() + '\'' +
                 ", totalMoneyRaised='" + totalMoneyRaised + '\'' +
-                ", country='" + country + '\'' +
+                ", country='" + server.country + '\'' +
                 '}';
     }
 
