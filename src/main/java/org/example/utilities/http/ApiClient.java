@@ -42,8 +42,6 @@ public class ApiClient implements ParserCompanySubscriber {
 
     public void getJson(URI uri, Company company) throws ExecutionException, InterruptedException {
 
-        L.info("API call to send ");
-
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .timeout(Duration.ofSeconds(2))
@@ -59,15 +57,13 @@ public class ApiClient implements ParserCompanySubscriber {
 
     private void handleData(Company company, CompletableFuture<HttpResponse<String>> response) {
 
-
-        CompletableFuture<String> result = response.whenComplete((resp, throwable) -> {
-            if (throwable instanceof HttpTimeoutException) {
-                L.error("Timeout reached on company {}", company);
-            } else if (throwable != null) {
-                L.error("An exception occured ! ", throwable);
-            } else if (resp.statusCode() != 200) {
-                L.error("Wrong Status code received for company {} {}", resp.statusCode(), resp.body());
+        CompletableFuture<String> result = response.exceptionally((t) -> {
+            if (t.getCause() instanceof HttpTimeoutException) {
+                L.error("Timeout reached on company {}", company.name);
+            } else {
+                L.error("An exception occured ! ", t);
             }
+            return null;
         }).thenApply(HttpResponse::body);
 
         CompletableFuture<Server> server = result.thenApply(JsonParser::parseServer);
