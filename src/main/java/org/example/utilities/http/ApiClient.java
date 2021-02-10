@@ -15,6 +15,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,19 +46,30 @@ public class ApiClient implements ParserCompanySubscriber {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
-                .timeout(Duration.ofSeconds(5))
+                .timeout(Duration.ofSeconds(2))
                 .version(HttpClient.Version.HTTP_2)
                 .setHeader("User-Agent", "Java 11 HttpClient")
                 .header("Content-Type", "application/json")
                 .build();
 
         CompletableFuture<HttpResponse<String>> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+
         handleData(company, response);
     }
 
     private void handleData(Company company, CompletableFuture<HttpResponse<String>> response) {
 
-        CompletableFuture<String> result = response.thenApply(HttpResponse::body);
+
+        CompletableFuture<String> result = response.whenComplete((resp, throwable) -> {
+            if (throwable instanceof HttpTimeoutException) {
+                L.error("Timeout reached on company {}", company);
+            } else if (throwable != null) {
+                L.error("An exception occured ! ", throwable);
+            } else if (resp.statusCode() != 200) {
+                L.error("Wrong Status code received for company {} {}", resp.statusCode(), resp.body());
+            }
+        }).thenApply(HttpResponse::body);
+
         CompletableFuture<Server> server = result.thenApply(JsonParser::parseServer);
         CompletableFuture<Company> comp = server.thenApply(s -> {
             company.server = s;

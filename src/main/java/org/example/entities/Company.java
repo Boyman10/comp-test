@@ -34,7 +34,7 @@ public class Company {
                 return this.homepageUrl.toString();
             }
         } else {
-            return null;
+            return "";
         }
 
     }
