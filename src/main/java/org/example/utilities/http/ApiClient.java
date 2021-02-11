@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 
 public class ApiClient implements ParserCompanySubscriber {
 
@@ -30,6 +31,12 @@ public class ApiClient implements ParserCompanySubscriber {
     private final URI url;
     private final HttpClient client;
     private Subscription subscription;
+    private Semaphore semaphore;
+
+    @Override
+    public void setSemaphore(Semaphore semaphore) {
+        this.semaphore = semaphore;
+    }
 
     private List<CompletableFuture<Void>> futures;
 
@@ -79,6 +86,7 @@ public class ApiClient implements ParserCompanySubscriber {
 
     protected void printResult(Company company) {
         L.info(company.toString());
+        this.semaphore.release();
     }
 
     @Override

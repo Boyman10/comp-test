@@ -12,10 +12,13 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
 public class BulkJsonParser {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
+
+    private static final int QUEUE_SIZE = 5;
     private final ParserCompanySubscriber subscriber;
 
     public BulkJsonParser(ParserCompanySubscriber subscriber) {
@@ -35,6 +38,8 @@ public class BulkJsonParser {
             long timelapse = System.currentTimeMillis();
             reader.beginArray();
 
+            Semaphore semaphore = new Semaphore(QUEUE_SIZE);
+            subscriber.setSemaphore(semaphore);
             int i = 0;
             while (reader.hasNext()) {
                 if (i++ > 100)
@@ -43,6 +48,10 @@ public class BulkJsonParser {
                     Company company = gson.fromJson(reader, Company.class);
                     // create a publisher & ensure all data are kept in memory until the subscriber receives it
                     Flowable.just(company).onBackpressureBuffer().subscribe(subscriber);
+
+                    if (semaphore.getQueueLength() > QUEUE_SIZE) {
+                        semaphore.acquire(QUEUE_SIZE);
+                    }
                 }
             }
             reader.endArray();
@@ -57,7 +66,9 @@ public class BulkJsonParser {
             L.error("An error occurred", ex);
 
         } catch (IOException ex) {
-            L.error("An IO Exception occurred", ex);
+            L.error("An IO Exception occurred ", ex);
+        } catch (InterruptedException e) {
+            L.error("Got interrupted ", e);
         }
     }
 }
