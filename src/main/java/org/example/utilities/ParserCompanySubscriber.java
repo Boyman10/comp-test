@@ -8,5 +8,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface ParserCompanySubscriber extends Subscriber<Company> {
 
-    public List<CompletableFuture<Void>> getFutures();
+    List<CompletableFuture<Void>> getFutures();
 }

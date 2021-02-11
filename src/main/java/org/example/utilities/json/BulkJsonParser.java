@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
 public class BulkJsonParser {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
+
     private final ParserCompanySubscriber subscriber;
 
     public BulkJsonParser(ParserCompanySubscriber subscriber) {
@@ -28,7 +29,7 @@ public class BulkJsonParser {
             JsonReader reader = new JsonReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
 
             GsonBuilder builder = new GsonBuilder();
-            builder.registerTypeAdapter(Float.class, new MoneyDeserializer());
+            builder.registerTypeAdapter(Double.class, new MoneyDeserializer());
             Gson gson = builder.create();
 
             L.info("About to read file {} in stream mode", file);
@@ -37,18 +38,14 @@ public class BulkJsonParser {
 
             int i = 0;
             while (reader.hasNext()) {
-                if (i++ > 100)
-                    reader.skipValue();
-                else {
-                    Company company = gson.fromJson(reader, Company.class);
-                    // create a publisher & ensure all data are kept in memory until the subscriber receives it
-                    Flowable.just(company).onBackpressureBuffer().subscribe(subscriber);
-                }
+                Company company = gson.fromJson(reader, Company.class);
+                Flowable.just(company).subscribe(subscriber);
+                i++;
             }
             reader.endArray();
             reader.close();
 
-            L.info("Went over the file in {} ms", System.currentTimeMillis() - timelapse);
+            L.info("Went over the file ({} companies) in {} ms", i, System.currentTimeMillis() - timelapse);
             L.info("Now waiting for the subscriber to terminate");
             CompletableFuture.allOf(subscriber.getFutures().toArray(new CompletableFuture[subscriber.getFutures().size()])).join();
 
@@ -57,7 +54,7 @@ public class BulkJsonParser {
             L.error("An error occurred", ex);
 
         } catch (IOException ex) {
-            L.error("An IO Exception occurred", ex);
+            L.error("An IO Exception occurred ", ex);
         }
     }
 }

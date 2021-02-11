@@ -3,9 +3,10 @@ package org.example.utilities.http;
 import org.example.entities.Company;
 import org.example.entities.Server;
 import org.example.utilities.ParserCompanySubscriber;
+import org.example.utilities.StatsApi;
 import org.example.utilities.json.BulkJsonParser;
 import org.example.utilities.json.JsonParser;
-import org.example.utilities.properties.ApiInfo;
+import org.example.utilities.properties.HttpApiProperties;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,49 +16,67 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 
-public class ApiClient implements ParserCompanySubscriber {
+public class HttpApiClient implements ParserCompanySubscriber {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
-    private static final long REQUEST_VOLUME = 2;
+    private static final long REQUEST_VOLUME = 1;
+    private static final int QUEUE_SIZE = 50;
+    private static final String EMPTY_COUNTRY = "{\"country_name\":\"\"}";
+
     private final String key;
     private final URI url;
     private final HttpClient client;
     private Subscription subscription;
+    private final Semaphore semaphore;
 
     private List<CompletableFuture<Void>> futures;
+    private StatsApi api;
 
-    public ApiClient(ApiInfo info) {
+    public HttpApiClient(HttpApiProperties info, StatsApi api) {
         this.key = info.key;
         this.url = info.url;
         this.client = HttpClient.newHttpClient();
         futures = new ArrayList<>();
+        semaphore = new Semaphore(QUEUE_SIZE);
+        this.api = api;
     }
 
     public void getJson(URI uri, Company company) throws ExecutionException, InterruptedException {
 
-        L.info("API call to send ");
-
+        semaphore.acquire();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
-                .timeout(Duration.ofSeconds(5))
+                .timeout(Duration.ofSeconds(2))
                 .version(HttpClient.Version.HTTP_2)
                 .setHeader("User-Agent", "Java 11 HttpClient")
                 .header("Content-Type", "application/json")
                 .build();
 
         CompletableFuture<HttpResponse<String>> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+
         handleData(company, response);
     }
 
     private void handleData(Company company, CompletableFuture<HttpResponse<String>> response) {
 
-        CompletableFuture<String> result = response.thenApply(HttpResponse::body);
+        CompletableFuture<String> result = response.exceptionally((t) -> {
+            if (t.getCause() instanceof HttpTimeoutException) {
+                L.error("Timeout reached on company {}", company.name);
+            } else {
+                L.error("An exception occured ! ", t);
+            }
+            return null;
+        }).thenApply(h -> h == null ? EMPTY_COUNTRY : h.body())
+                .thenApply(body -> body.indexOf("country_name") > 0 ? body : EMPTY_COUNTRY);
+
         CompletableFuture<Server> server = result.thenApply(JsonParser::parseServer);
         CompletableFuture<Company> comp = server.thenApply(s -> {
             company.server = s;
@@ -70,7 +89,9 @@ public class ApiClient implements ParserCompanySubscriber {
     }
 
     protected void printResult(Company company) {
-        L.info(company.toString());
+        L.debug(company.toString());
+        this.api.addCompany(company);
+        this.semaphore.release();
     }
 
     @Override
@@ -85,7 +106,7 @@ public class ApiClient implements ParserCompanySubscriber {
     public void onNext(Company company) {
         try {
             URI uri = new URI(this.url + company.getDomainName() + "?access_key=" + this.key);
-            L.info("About to fetch data from the API ; " + uri);
+            L.debug("About to fetch data from the API ; " + uri);
             this.getJson(uri, company);
         } catch (URISyntaxException e) {
             L.error("malformed URI ", e);
@@ -103,7 +124,7 @@ public class ApiClient implements ParserCompanySubscriber {
 
     @Override
     public void onComplete() {
-        L.info("Job completed");
+        L.debug("Job completed");
     }
 
     @Override

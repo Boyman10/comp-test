@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 
-public class MoneyDeserializer implements JsonDeserializer<Float> {
+public class MoneyDeserializer implements JsonDeserializer<Double> {
 
     private static final Logger L = LoggerFactory.getLogger(MoneyDeserializer.class);
 
@@ -18,30 +18,29 @@ public class MoneyDeserializer implements JsonDeserializer<Float> {
     private static final String THOUSANDS = "k";
 
     @Override
-    public Float deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+    public Double deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
         return formatFunds(jsonElement.getAsString());
     }
 
-    protected Float formatFunds(String element) {
+    protected Double formatFunds(String element) {
         try {
             int indexOfCurrency = getIndexOfCurrency(element);
 
             if (element.length() > indexOfCurrency) {
-                // no regex for perf purposes
                 if (element.endsWith(BILLION)) {
-                    return Float.parseFloat(element.substring(indexOfCurrency, element.length() - 1)) * 1_000_000_000;
+                    return Double.parseDouble(element.substring(indexOfCurrency, element.length() - 1)) * 1_000_000_000;
                 } else if (element.endsWith(MILLION)) {
-                    return Float.parseFloat(element.substring(indexOfCurrency, element.length() - 1)) * 1_000_000;
+                    return Double.parseDouble(element.substring(indexOfCurrency, element.length() - 1)) * 1_000_000;
                 } else if (element.endsWith(THOUSANDS)) {
-                    return Float.parseFloat(element.substring(indexOfCurrency, element.length() - 1)) * 1_000;
+                    return Double.parseDouble(element.substring(indexOfCurrency, element.length() - 1)) * 1_000;
                 } else {
-                    return Float.parseFloat(element.substring(indexOfCurrency));
+                    return Double.parseDouble(element.substring(indexOfCurrency));
                 }
             } else {
-                return 0f;
+                return 0d;
             }
         } catch (NumberFormatException e) {
-            L.error("Number format unknown ", element);
+            L.error("Number format unknown {}", element);
             throw e;
         }
     }
