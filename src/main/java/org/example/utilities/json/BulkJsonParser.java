@@ -12,13 +12,11 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Semaphore;
 
 public class BulkJsonParser {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
 
-    private static final int QUEUE_SIZE = 5;
     private final ParserCompanySubscriber subscriber;
 
     public BulkJsonParser(ParserCompanySubscriber subscriber) {
@@ -31,33 +29,23 @@ public class BulkJsonParser {
             JsonReader reader = new JsonReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
 
             GsonBuilder builder = new GsonBuilder();
-            builder.registerTypeAdapter(Float.class, new MoneyDeserializer());
+            builder.registerTypeAdapter(Double.class, new MoneyDeserializer());
             Gson gson = builder.create();
 
             L.info("About to read file {} in stream mode", file);
             long timelapse = System.currentTimeMillis();
             reader.beginArray();
 
-            Semaphore semaphore = new Semaphore(QUEUE_SIZE);
-            subscriber.setSemaphore(semaphore);
             int i = 0;
             while (reader.hasNext()) {
-                if (i++ > 100)
-                    reader.skipValue();
-                else {
-                    Company company = gson.fromJson(reader, Company.class);
-                    // create a publisher & ensure all data are kept in memory until the subscriber receives it
-                    Flowable.just(company).onBackpressureBuffer().subscribe(subscriber);
-
-                    if (semaphore.getQueueLength() > QUEUE_SIZE) {
-                        semaphore.acquire(QUEUE_SIZE);
-                    }
-                }
+                Company company = gson.fromJson(reader, Company.class);
+                Flowable.just(company).subscribe(subscriber);
+                i++;
             }
             reader.endArray();
             reader.close();
 
-            L.info("Went over the file in {} ms", System.currentTimeMillis() - timelapse);
+            L.info("Went over the file ({} companies) in {} ms", i, System.currentTimeMillis() - timelapse);
             L.info("Now waiting for the subscriber to terminate");
             CompletableFuture.allOf(subscriber.getFutures().toArray(new CompletableFuture[subscriber.getFutures().size()])).join();
 
@@ -67,8 +55,6 @@ public class BulkJsonParser {
 
         } catch (IOException ex) {
             L.error("An IO Exception occurred ", ex);
-        } catch (InterruptedException e) {
-            L.error("Got interrupted ", e);
         }
     }
 }

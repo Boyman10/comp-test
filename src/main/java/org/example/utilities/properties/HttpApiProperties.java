@@ -2,7 +2,7 @@ package org.example.utilities.properties;
 
 import java.net.URI;
 
-public class ApiInfo {
+public class HttpApiProperties {
     public URI url;
     public String key;
 }

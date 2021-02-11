@@ -9,7 +9,7 @@ public class Company {
     @SerializedName("homepage_url")
     public URI homepageUrl;
     @SerializedName("total_money_raised")
-    public Float totalMoneyRaised;
+    public Double totalMoneyRaised;
 
     public String name;
     public Server server;

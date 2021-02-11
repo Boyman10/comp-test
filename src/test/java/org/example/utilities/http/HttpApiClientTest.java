@@ -3,13 +3,14 @@ package org.example.utilities.http;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.example.entities.Company;
-import org.example.utilities.properties.ApiInfo;
+import org.example.utilities.StatsApi;
+import org.example.utilities.properties.HttpApiProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
-class ApiClientTest {
+class HttpApiClientTest {
 
     MockWebServer mockWebServer = new MockWebServer();
 
@@ -20,7 +21,7 @@ class ApiClientTest {
                 .setBody("{}")
                 .setResponseCode(200));
 
-        ApiClient client = new ApiClient(new ApiInfo());
+        HttpApiClient client = new HttpApiClient(new HttpApiProperties(), new StatsApi());
         client.getJson(mockWebServer.url("/").uri(), new Company());
 
         Assertions.assertFalse(client.getFutures().isEmpty());

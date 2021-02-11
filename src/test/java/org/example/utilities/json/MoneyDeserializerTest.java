@@ -33,13 +33,13 @@ class MoneyDeserializerTest {
 
     @Test
     public void test_formatFunds$() {
-        Float funds = deserializer.formatFunds("$15200");
+        Double funds = deserializer.formatFunds("$15200");
         Assertions.assertEquals(15200, funds);
     }
 
     @Test
     public void test_formatFunds€() {
-        Float funds = deserializer.formatFunds("€15B");
+        Double funds = deserializer.formatFunds("€15B");
         Assertions.assertEquals(15_000_000_000L, funds);
     }
 }
