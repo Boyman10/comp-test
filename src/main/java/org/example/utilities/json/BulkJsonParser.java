@@ -38,8 +38,13 @@ public class BulkJsonParser {
 
             int i = 0;
             while (reader.hasNext()) {
-                Company company = gson.fromJson(reader, Company.class);
-                Flowable.just(company).subscribe(subscriber);
+                if (i > 20) {
+                    reader.skipValue();
+                } else {
+                    this.subscriber.getSemaphore().acquire();
+                    Company company = gson.fromJson(reader, Company.class);
+                    Flowable.just(company).subscribe(subscriber);
+                }
                 i++;
             }
             reader.endArray();
@@ -55,6 +60,8 @@ public class BulkJsonParser {
 
         } catch (IOException ex) {
             L.error("An IO Exception occurred ", ex);
+        } catch (InterruptedException e) {
+            L.error("Got interrupted ", e);
         }
     }
 }

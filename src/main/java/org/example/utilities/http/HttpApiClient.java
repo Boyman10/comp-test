@@ -28,7 +28,6 @@ public class HttpApiClient implements ParserCompanySubscriber {
 
     private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
     private static final long REQUEST_VOLUME = 1;
-    private static final int QUEUE_SIZE = 50;
     private static final String EMPTY_COUNTRY = "{\"country_name\":\"\"}";
 
     private final String key;
@@ -44,14 +43,13 @@ public class HttpApiClient implements ParserCompanySubscriber {
         this.key = info.key;
         this.url = info.url;
         this.client = HttpClient.newHttpClient();
-        futures = new ArrayList<>();
-        semaphore = new Semaphore(QUEUE_SIZE);
+        this.futures = new ArrayList<>();
+        this.semaphore = new Semaphore(info.queueSize);
         this.api = api;
     }
 
     public void getJson(URI uri, Company company) throws ExecutionException, InterruptedException {
 
-        semaphore.acquire();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .timeout(Duration.ofSeconds(2))
@@ -130,5 +128,10 @@ public class HttpApiClient implements ParserCompanySubscriber {
     @Override
     public List<CompletableFuture<Void>> getFutures() {
         return this.futures;
+    }
+
+    @Override
+    public Semaphore getSemaphore() {
+        return semaphore;
     }
 }
