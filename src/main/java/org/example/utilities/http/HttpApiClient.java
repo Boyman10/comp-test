@@ -1,12 +1,12 @@
 package org.example.utilities.http;
 
+import org.example.BulkCompanyProcessor;
 import org.example.entities.Company;
 import org.example.entities.Server;
+import org.example.entities.properties.HttpApiProperties;
 import org.example.utilities.ParserCompanySubscriber;
 import org.example.utilities.StatsApi;
-import org.example.utilities.json.BulkJsonParser;
 import org.example.utilities.json.JsonParser;
-import org.example.utilities.properties.HttpApiProperties;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +26,8 @@ import java.util.concurrent.Semaphore;
 
 public class HttpApiClient implements ParserCompanySubscriber {
 
-    private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
+    private static final Logger L = LoggerFactory.getLogger(BulkCompanyProcessor.class);
     private static final long REQUEST_VOLUME = 1;
-    private static final int QUEUE_SIZE = 50;
     private static final String EMPTY_COUNTRY = "{\"country_name\":\"\"}";
 
     private final String key;
@@ -37,21 +36,20 @@ public class HttpApiClient implements ParserCompanySubscriber {
     private Subscription subscription;
     private final Semaphore semaphore;
 
-    private List<CompletableFuture<Void>> futures;
-    private StatsApi api;
+    private final List<CompletableFuture<Void>> futures;
+    private final StatsApi api;
 
     public HttpApiClient(HttpApiProperties info, StatsApi api) {
         this.key = info.key;
         this.url = info.url;
         this.client = HttpClient.newHttpClient();
-        futures = new ArrayList<>();
-        semaphore = new Semaphore(QUEUE_SIZE);
+        this.futures = new ArrayList<>();
+        this.semaphore = new Semaphore(info.queueSize);
         this.api = api;
     }
 
     public void getJson(URI uri, Company company) throws ExecutionException, InterruptedException {
 
-        semaphore.acquire();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .timeout(Duration.ofSeconds(2))
@@ -130,5 +128,10 @@ public class HttpApiClient implements ParserCompanySubscriber {
     @Override
     public List<CompletableFuture<Void>> getFutures() {
         return this.futures;
+    }
+
+    @Override
+    public Semaphore getSemaphore() {
+        return semaphore;
     }
 }

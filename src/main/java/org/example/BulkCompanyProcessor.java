@@ -1,11 +1,12 @@
-package org.example.utilities.json;
+package org.example;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
-import io.reactivex.Flowable;
+import io.reactivex.rxjava3.core.Flowable;
 import org.example.entities.Company;
 import org.example.utilities.ParserCompanySubscriber;
+import org.example.utilities.json.MoneyDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,20 +14,22 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-public class BulkJsonParser {
+public class BulkCompanyProcessor {
 
-    private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
+    private static final Logger L = LoggerFactory.getLogger(BulkCompanyProcessor.class);
 
     private final ParserCompanySubscriber subscriber;
+    private final int limit;
 
-    public BulkJsonParser(ParserCompanySubscriber subscriber) {
+    public BulkCompanyProcessor(ParserCompanySubscriber subscriber, int limit) {
         this.subscriber = subscriber;
+        this.limit = limit;
     }
 
     public void run(File file) {
         try {
             InputStream stream = new FileInputStream(file);
-            JsonReader reader = new JsonReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
+            JsonReader reader = new JsonReader(new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
 
             GsonBuilder builder = new GsonBuilder();
             builder.registerTypeAdapter(Double.class, new MoneyDeserializer());
@@ -38,8 +41,13 @@ public class BulkJsonParser {
 
             int i = 0;
             while (reader.hasNext()) {
-                Company company = gson.fromJson(reader, Company.class);
-                Flowable.just(company).subscribe(subscriber);
+                if (limit > 0 && i > limit) {
+                    reader.skipValue();
+                } else {
+                    this.subscriber.getSemaphore().acquire();
+                    Company company = gson.fromJson(reader, Company.class);
+                    Flowable.just(company).subscribe(subscriber);
+                }
                 i++;
             }
             reader.endArray();
@@ -55,6 +63,8 @@ public class BulkJsonParser {
 
         } catch (IOException ex) {
             L.error("An IO Exception occurred ", ex);
+        } catch (InterruptedException e) {
+            L.error("Got interrupted ", e);
         }
     }
 }

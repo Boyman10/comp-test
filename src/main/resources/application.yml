@@ -1,2 +1,4 @@
 url: http://api.ipstack.com/
-key: 234985d6f9912e01138f31076d793a0d
+key: e769a6893c9485e65f839d9bf61e1b67
+queueSize: 2
+limit: 5

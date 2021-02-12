@@ -2,6 +2,7 @@ package org.example.utilities.properties;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.example.entities.properties.HttpApiProperties;
 
 import java.io.File;
 import java.io.IOException;
