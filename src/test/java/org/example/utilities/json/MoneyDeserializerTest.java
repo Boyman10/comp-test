@@ -14,24 +14,6 @@ class MoneyDeserializerTest {
     }
 
     @Test
-    public void test_get_index_on_currency() {
-        int index = deserializer.getIndexOfCurrency("$15200");
-        Assertions.assertEquals(1, index);
-    }
-
-    @Test
-    public void test_get_index_on_missing_currency() {
-        int index = deserializer.getIndexOfCurrency("15200");
-        Assertions.assertEquals(0, index);
-    }
-
-    @Test
-    public void test_get_index_on_unknown_currency() {
-        int index = deserializer.getIndexOfCurrency("P15200");
-        Assertions.assertEquals(0, index);
-    }
-
-    @Test
     public void test_formatFunds$() {
         Double funds = deserializer.formatFunds("$15200");
         Assertions.assertEquals(15200, funds);
@@ -41,5 +23,11 @@ class MoneyDeserializerTest {
     public void test_formatFunds€() {
         Double funds = deserializer.formatFunds("€15B");
         Assertions.assertEquals(15_000_000_000L, funds);
+    }
+
+    @Test
+    public void test_formatFunds_k() {
+        Double funds = deserializer.formatFunds("€15000k");
+        Assertions.assertEquals(15_000_000L, funds);
     }
 }

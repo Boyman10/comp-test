@@ -6,9 +6,12 @@ import org.example.entities.StatDTO;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Takes care of the printout - We call the computeAverage method each time we processed a company
+ */
 public class StatsApi {
 
-    private Map<String, StatDTO> stats = new HashMap<>();
+    private final Map<String, StatDTO> stats = new HashMap<>();
 
     public static double computeAverage(double average, int number, double additionalFund) {
         return Math.round(((average * (number - 1) + additionalFund) / number) * 100.0) / 100.0;
@@ -29,7 +32,7 @@ public class StatsApi {
 
     public String getStats() {
         StringBuilder result = new StringBuilder();
-        stats.forEach((key, value) -> result.append(String.join(",", key, value.toString()) + "\n"));
+        stats.forEach((key, value) -> result.append(String.join(",", key, value.toString())).append("\n"));
 
         return result.toString();
     }

@@ -1,12 +1,12 @@
 package org.example.utilities.http;
 
+import org.example.BulkCompanyProcessor;
 import org.example.entities.Company;
 import org.example.entities.Server;
+import org.example.entities.properties.HttpApiProperties;
 import org.example.utilities.ParserCompanySubscriber;
 import org.example.utilities.StatsApi;
-import org.example.utilities.json.BulkJsonParser;
 import org.example.utilities.json.JsonParser;
-import org.example.utilities.properties.HttpApiProperties;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ import java.util.concurrent.Semaphore;
 
 public class HttpApiClient implements ParserCompanySubscriber {
 
-    private static final Logger L = LoggerFactory.getLogger(BulkJsonParser.class);
+    private static final Logger L = LoggerFactory.getLogger(BulkCompanyProcessor.class);
     private static final long REQUEST_VOLUME = 1;
     private static final String EMPTY_COUNTRY = "{\"country_name\":\"\"}";
 
@@ -36,8 +36,8 @@ public class HttpApiClient implements ParserCompanySubscriber {
     private Subscription subscription;
     private final Semaphore semaphore;
 
-    private List<CompletableFuture<Void>> futures;
-    private StatsApi api;
+    private final List<CompletableFuture<Void>> futures;
+    private final StatsApi api;
 
     public HttpApiClient(HttpApiProperties info, StatsApi api) {
         this.key = info.key;

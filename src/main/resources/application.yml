@@ -1,3 +1,4 @@
 url: http://api.ipstack.com/
 key: e769a6893c9485e65f839d9bf61e1b67
-queue_size: 2
+queueSize: 2
+limit: 5

@@ -3,8 +3,8 @@ package org.example.utilities.http;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.example.entities.Company;
+import org.example.entities.properties.HttpApiProperties;
 import org.example.utilities.StatsApi;
-import org.example.utilities.properties.HttpApiProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
